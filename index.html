@@ -209,11 +209,13 @@
         csvData.push({
           domain: domain,
           content: csvContent,
-          filename: `${domain}.csv`
+          filename: `${domain}.csv`,
+          downloaded: false
         });
       });
 
       // Display the results
+      globalCsvData = csvData;
       displayResults(csvData);
     }
 
@@ -226,20 +228,32 @@
       
       csvData.forEach((csv, index) => {
         const csvDiv = document.createElement("div");
-        csvDiv.style.cssText = "display: flex; align-items: center; justify-content: space-between; border: 1px solid #ddd; margin: 5px 0; padding: 10px 15px; border-radius: 5px; background-color: #f9f9f9;";
+        csvDiv.style.cssText = `display: flex; align-items: center; justify-content: space-between; border: 1px solid #ddd; margin: 5px 0; padding: 10px 15px; border-radius: 5px; background-color: ${csv.downloaded ? '#e8f5e8' : '#f9f9f9'}; transition: background-color 0.3s ease;`;
+        
+        const filenameContainer = document.createElement("div");
+        filenameContainer.style.cssText = "display: flex; align-items: center; gap: 10px;";
         
         const filename = document.createElement("span");
         filename.textContent = csv.filename;
         filename.style.cssText = "font-weight: bold; color: #333; font-size: 14px;";
         
-        const downloadBtn = document.createElement("button");
-        downloadBtn.textContent = "Download";
-        downloadBtn.style.cssText = "background-color: #007cba; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;";
-        downloadBtn.onmouseover = () => downloadBtn.style.backgroundColor = "#005a87";
-        downloadBtn.onmouseout = () => downloadBtn.style.backgroundColor = "#007cba";
-        downloadBtn.onclick = () => downloadCSV(csv.content, csv.filename);
+        const indicator = document.createElement("span");
+        if (csv.downloaded) {
+          indicator.textContent = "✓ Downloaded";
+          indicator.style.cssText = "color: #28a745; font-size: 12px; font-weight: 600;";
+        }
         
-        csvDiv.appendChild(filename);
+        filenameContainer.appendChild(filename);
+        filenameContainer.appendChild(indicator);
+        
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = csv.downloaded ? "Download Again" : "Download";
+        downloadBtn.style.cssText = `background-color: ${csv.downloaded ? '#6c757d' : '#007cba'}; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background-color 0.3s ease;`;
+        downloadBtn.onmouseover = () => downloadBtn.style.backgroundColor = csv.downloaded ? '#5a6268' : '#005a87';
+        downloadBtn.onmouseout = () => downloadBtn.style.backgroundColor = csv.downloaded ? '#6c757d' : '#007cba';
+        downloadBtn.onclick = () => downloadCSV(csv.content, csv.filename, index);
+        
+        csvDiv.appendChild(filenameContainer);
         csvDiv.appendChild(downloadBtn);
         csvListDiv.appendChild(csvDiv);
       });
@@ -247,7 +261,10 @@
       resultsDiv.style.display = "block";
     }
 
-    function downloadCSV(content, filename) {
+    // Global variable to store CSV data for tracking
+    let globalCsvData = [];
+
+    function downloadCSV(content, filename, index) {
       const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -255,6 +272,10 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Mark as downloaded and update UI
+      globalCsvData[index].downloaded = true;
+      displayResults(globalCsvData);
     }
   </script>
 </body>
