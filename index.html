@@ -9,57 +9,122 @@
       margin: 20px;
       background: #f8f9fa;
     }
-    h2 {
-      margin-bottom: 5px;
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .intro-text {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .input-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .input-group h2 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+    }
+    .patterns-domains-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
     }
     textarea {
       width: 100%;
       height: 120px;
-      margin-bottom: 20px;
-      padding: 8px;
+      padding: 12px;
       font-size: 14px;
+      border: 2px solid #e1e5e9;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
     }
     button {
-      padding: 10px 15px;
+      padding: 12px 24px;
       font-size: 16px;
       cursor: pointer;
-      background: #007bff;
+      background: linear-gradient(135deg, #007bff, #0056b3);
       border: none;
       color: white;
-      border-radius: 5px;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
     }
     button:hover {
-      background: #0056b3;
+      background: linear-gradient(135deg, #0056b3, #004085);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    }
+    button:active {
+      transform: translateY(0);
     }
   </style>
 </head>
 <body>
   <h1>Google Admin Bulk CSV Generator</h1>
-  <p>Paste your data (one entry per line):</p>
+  <p class="intro-text">Paste your data (one entry per line):</p>
 
-  <h2>First Names</h2>
-  <textarea id="firstNames"></textarea>
+  <div class="input-container">
+    <div class="input-group">
+      <h2>First Names</h2>
+      <textarea id="firstNames"></textarea>
+    </div>
+    
+    <div class="input-group">
+      <h2>Last Names</h2>
+      <textarea id="lastNames"></textarea>
+    </div>
+    
+    <div class="input-group">
+      <h2>Passwords</h2>
+      <textarea id="passwords"></textarea>
+    </div>
+  </div>
 
-  <h2>Last Names</h2>
-  <textarea id="lastNames"></textarea>
+  <div class="patterns-domains-container">
+    <div class="input-group">
+      <h2>Patterns (one row per domain, comma-separated per row)</h2>
+      <textarea id="patterns" placeholder="name@,namesurname@,admin@&#10;support@,help@,info@&#10;sales@,contact@"></textarea>
+    </div>
+    
+    <div class="input-group">
+      <h2>Domains (e.g. sample.com, test.org)</h2>
+      <textarea id="domains"></textarea>
+    </div>
+  </div>
 
-  <h2>Passwords</h2>
-  <textarea id="passwords"></textarea>
+  <button onclick="generateCSVs()">Generate CSVs</button>
 
-  <h2>Patterns (e.g. name@, namesurname@, admin@)</h2>
-  <textarea id="patterns"></textarea>
-
-  <h2>Domains (e.g. sample.com, test.org)</h2>
-  <textarea id="domains"></textarea>
-
-  <button onclick="generateCSVs()">Download All CSVs</button>
+  <div id="results" style="margin-top: 20px; display: none;">
+    <h2>Generated CSV Files</h2>
+    <div id="csvList"></div>
+  </div>
 
   <script>
     function generateCSVs() {
       const firstNames = document.getElementById("firstNames").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
       const lastNames = document.getElementById("lastNames").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
       const passwords = document.getElementById("passwords").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
-      const patterns = document.getElementById("patterns").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
+      const patternsInput = document.getElementById("patterns").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
+      const patterns = patternsInput.map(row => row.split(",").map(x => x.trim()).filter(Boolean));
       const domains = document.getElementById("domains").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
 
       if (firstNames.length !== lastNames.length || firstNames.length !== passwords.length) {
@@ -67,8 +132,13 @@
         return;
       }
       
-      if (patterns.length === 0) {
-        alert("Error: You must provide at least one pattern.");
+      if (patterns.length === 0 || patterns.every(row => row.length === 0)) {
+        alert("Error: Please enter at least one pattern.");
+        return;
+      }
+
+      if (domains.length !== patterns.length) {
+        alert("Error: Number of domain rows must match number of pattern rows.");
         return;
       }
 
@@ -84,20 +154,28 @@
       
       const header = headers.join(",");
 
-      // Create a CSV file for each domain
-      domains.forEach(domain => {
-        const rows = [header];
+      // Store generated CSV data
+      const csvData = [];
 
-        // For each pattern, create only one row
-        patterns.forEach(pattern => {
+      // Create a CSV file for each domain
+      domains.forEach((domain, domainIndex) => {
+        const rows = [header];
+        
+        // Get the patterns for this specific domain
+        const domainPatterns = patterns[domainIndex] || [];
+
+        // For each pattern in this domain's pattern row, create one row using the corresponding person's data
+        domainPatterns.forEach((pattern, patternIndex) => {
           const email = pattern + domain;
           
-          // Use the first person's data for all patterns
+          // Use the person data that corresponds to this domain index
+          const personIndex = domainIndex % firstNames.length;
+          
           const row = [
-            firstNames[0],                    // First Name [Required]
-            lastNames[0],                     // Last Name [Required]
+            firstNames[personIndex],          // First Name [Required]
+            lastNames[personIndex],           // Last Name [Required]
             email,                            // Email Address [Required]
-            passwords[0],                     // Password [Required]
+            passwords[personIndex],           // Password [Required]
             "",                               // Password Hash Function [UPLOAD ONLY]
             "/",                              // Org Unit Path [Required]
             "",                               // New Primary Email [UPLOAD ONLY]
@@ -128,14 +206,55 @@
         });
 
         const csvContent = rows.join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `google_admin_import_${domain}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        csvData.push({
+          domain: domain,
+          content: csvContent,
+          filename: `${domain}.csv`
+        });
       });
+
+      // Display the results
+      displayResults(csvData);
+    }
+
+    function displayResults(csvData) {
+      const resultsDiv = document.getElementById("results");
+      const csvListDiv = document.getElementById("csvList");
+      
+      // Clear previous results
+      csvListDiv.innerHTML = "";
+      
+      csvData.forEach((csv, index) => {
+        const csvDiv = document.createElement("div");
+        csvDiv.style.cssText = "display: flex; align-items: center; justify-content: space-between; border: 1px solid #ddd; margin: 5px 0; padding: 10px 15px; border-radius: 5px; background-color: #f9f9f9;";
+        
+        const filename = document.createElement("span");
+        filename.textContent = csv.filename;
+        filename.style.cssText = "font-weight: bold; color: #333; font-size: 14px;";
+        
+        const downloadBtn = document.createElement("button");
+        downloadBtn.textContent = "Download";
+        downloadBtn.style.cssText = "background-color: #007cba; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;";
+        downloadBtn.onmouseover = () => downloadBtn.style.backgroundColor = "#005a87";
+        downloadBtn.onmouseout = () => downloadBtn.style.backgroundColor = "#007cba";
+        downloadBtn.onclick = () => downloadCSV(csv.content, csv.filename);
+        
+        csvDiv.appendChild(filename);
+        csvDiv.appendChild(downloadBtn);
+        csvListDiv.appendChild(csvDiv);
+      });
+      
+      resultsDiv.style.display = "block";
+    }
+
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
