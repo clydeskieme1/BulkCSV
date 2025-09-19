@@ -94,17 +94,34 @@
           
           // Use the first person's data for all patterns
           const row = [
-            firstNames[0],
-            lastNames[0],
-            email,
-            passwords[0],
-            "", 
-            "/", 
-            "", 
-            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-            "FALSE", 
-            "", 
-            "FALSE"
+            firstNames[0],                    // First Name [Required]
+            lastNames[0],                     // Last Name [Required]
+            email,                            // Email Address [Required]
+            passwords[0],                     // Password [Required]
+            "",                               // Password Hash Function [UPLOAD ONLY]
+            "/",                              // Org Unit Path [Required]
+            "",                               // New Primary Email [UPLOAD ONLY]
+            "",                               // Recovery Email
+            "",                               // Home Secondary Email
+            "",                               // Work Secondary Email
+            "",                               // Recovery Phone [MUST BE IN THE E.164 FORMAT]
+            "",                               // Work Phone
+            "",                               // Home Phone
+            "",                               // Mobile Phone
+            "",                               // Work Address
+            "",                               // Home Address
+            "",                               // Employee ID
+            "",                               // Employee Type
+            "",                               // Employee Title
+            "",                               // Manager Email
+            "",                               // Department
+            "",                               // Cost Center
+            "",                               // Building ID
+            "",                               // Floor Name
+            "",                               // Floor Section
+            "FALSE",                          // Change Password at Next Sign-In
+            "",                               // New Status [UPLOAD ONLY]
+            "FALSE"                           // Advanced Protection Program enrollment
           ];
           
           rows.push(row.map(v => `"${v}"`).join(","));
